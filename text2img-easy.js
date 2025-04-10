@@ -4,6 +4,7 @@ const CONFIG = {
   CF_ENV: null,
   CF_TRANSLATE_MODEL: "@cf/qwen/qwen1.5-14b-chat-awq",  // 使用的cf ai模型
   SF_TOKEN:"sk-xxxxxxxxxxxxxxx",
+  IMAGE_EXPIRATION: 60 * 30 // 图片在 KV 中的过期时间（秒），这里设置为 30 分钟
 }
 
 async function getTranslationPrompt(prompt) {
@@ -93,12 +94,75 @@ async function postSfRequest(model, prompt, height, width) {
   return imageResponse.body;
 }
 
+// 返回 ArrayBuffer
+async function streamToArrayBuffer(stream) {
+  const reader = stream.getReader();
+  const chunks = [];
+  while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+  }
+  const totalLength = chunks.reduce((acc, chunk) => acc + chunk.byteLength, 0);
+  const result = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+      result.set(chunk, offset);
+      offset += chunk.byteLength;
+  }
+  return result.buffer; 
+}
+
+async function returnImg(requestUrl, response, imgurl) {
+  if(imgurl=='1'){
+    const imageBuffer = await streamToArrayBuffer(response);
+    const key = `image_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    
+    await CONFIG.CF_ENV.IMAGE_KV.put(key, imageBuffer, {
+      expirationTtl: CONFIG.IMAGE_EXPIRATION,
+      metadata: { contentType: 'image/png' }
+    });
+
+     // 返回 JSON 格式的 Response       
+    const imageUrl = `${new URL(requestUrl).origin}/image/${key}`;       
+    return new Response(imageUrl, { 
+      headers: { "content-type": "application/text" }       
+    });
+  }else{
+
+    return new Response(response, {
+      headers: { "content-type": "image/png"}
+    });
+  }
+}
+
+// 处理图片请求
+async function handleImageRequest(request) {
+  const url = new URL(request.url);
+  const key = url.pathname.split('/').pop();
+  const imageData = await CONFIG.CF_ENV.IMAGE_KV.get(key, 'arrayBuffer');
+ 
+  if (!imageData) {
+    return new Response('Image not found', { status: 404 });
+  }
+
+  return new Response(imageData, {
+    headers: {
+      'Content-Type': 'image/png',
+      'Cache-Control': 'public, max-age=604800',
+    },
+  });
+}
+
 export default {
   
   async fetch(request, env) {
     CONFIG.CF_ENV=env;
 
     const url = new URL(request.url);
+    if (url.pathname.startsWith('/image/')) {
+      return handleImageRequest(request);
+    }
      
     // 1. 获取并验证prompt参数
     const prompt = url.searchParams.get('prompt');
@@ -114,6 +178,7 @@ export default {
     const height = url.searchParams.get('height') || '1024'; // 设置高
     const width = url.searchParams.get('width') || '1024'; // 设置宽
     const expand = url.searchParams.get('expand') || '0'; // 是否拓展提示词
+    const imgurl = url.searchParams.get('imgurl') || '0'; // 是否返回图片链接
     const modelMap = {
       "DS-8-CF": "@cf/lykon/dreamshaper-8-lcm",
       "SD-XL-Bash-CF": "@cf/stabilityai/stable-diffusion-xl-base-1.0",
@@ -134,9 +199,7 @@ export default {
 
     if(model.startsWith("SF-")){
       const response = await postSfRequest(modelMap[model], tprompt, parseInt(height), parseInt(width));
-      return new Response(response, {
-        headers: { "content-type": "image/png"}
-      });
+      return returnImg(request.url, response, imgurl);
     }
 
     // console.log(tprompt)
@@ -150,17 +213,13 @@ export default {
     // console.log(response);
     if(model != 'FLUX.1-Schnell-CF'){
       // 4. 返回图像结果
-      return new Response(response, {
-        headers: { "content-type": "image/png"}
-      });
+      return returnImg(request.url, response, imgurl);
     }else{
       // Convert from base64 string
       const binaryString = atob(response.image);
       // Create byte representation
       const img = Uint8Array.from(binaryString, (m) => m.codePointAt(0));
-      return new Response(img, {
-        headers: { "content-type": "image/png"}
-      });
+      return returnImg(request.url, img, imgurl);
     }  
     
   },
