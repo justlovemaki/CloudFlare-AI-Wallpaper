@@ -11,7 +11,7 @@
 
  使用示例：https://xxxxxxxxxxxxx/?model=FLUX.1-Schnell-CF&width=720&height=1280&prompt=cat
  
- 部署该脚本需要绑定Workers AI，不依赖wallpaper.js，可独立使用。
+ 部署该脚本需要绑定Workers AI，增加KV命名空间并绑定到IMAGE_KV，不依赖wallpaper.js，可独立使用。
 
  SF_TOKEN为硅基流动平台的api token，需要提前申请，不使用可不填写。
 
