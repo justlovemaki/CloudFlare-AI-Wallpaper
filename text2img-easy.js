@@ -184,7 +184,9 @@ export default {
       "SD-XL-Bash-CF": "@cf/stabilityai/stable-diffusion-xl-base-1.0",
       "SD-XL-Lightning-CF": "@cf/bytedance/stable-diffusion-xl-lightning",
       "FLUX.1-Schnell-CF": "@cf/black-forest-labs/flux-1-schnell",
-      "SF-Kolors": "Kwai-Kolors/Kolors"
+      "SF-Kolors": "Kwai-Kolors/Kolors",
+      "SF-FLUX-schnell": "black-forest-labs/FLUX.1-schnell",
+      "SF-SD-35large": "stabilityai/stable-diffusion-3-5-large"
     };
 
     if (!modelMap[model]) {
