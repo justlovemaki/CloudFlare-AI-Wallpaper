@@ -34,7 +34,7 @@ export default {
             const image = document.getElementById('display-image');
             const modelToggleButton = document.getElementById('modelToggleButton');
             
-            let currentModel = 'FLUX.1-Schnell-CF'; // 默认模型
+            let currentModel = 'SF-FLUX-schnell'; // 默认模型
             
             const showStyle = style => {
               const randomString = Math.random().toString(36).substring(2, 15); // 生成随机字符串
@@ -44,8 +44,8 @@ export default {
             
             // 切换模型按钮事件
             modelToggleButton.addEventListener('click', () => {
-              currentModel = currentModel === 'FLUX.1-Schnell-CF' ? 'SF-Kolors' : 'FLUX.1-Schnell-CF';
-              modelToggleButton.textContent = \`切换到 \${currentModel === 'FLUX.1-Schnell-CF' ? 'SF-Kolors' : 'FLUX.1-Schnell-CF'}\`;
+              currentModel = currentModel === 'SF-FLUX-schnell' ? 'SF-Kolors' : 'SF-FLUX-schnell';
+              modelToggleButton.textContent = \`切换到 \${currentModel === 'SF-FLUX-schnell' ? 'SF-Kolors' : 'SF-FLUX-schnell'}\`;
               alert(\`当前模型已切换为 \${currentModel}\`);
             });
             
